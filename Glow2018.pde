@@ -1,4 +1,4 @@
-boolean debug = true;
+boolean debug = false;
 
 import org.openkinect.processing.*;
 import com.thomasdiewald.pixelflow.java.imageprocessing.DwOpticalFlow;
@@ -9,129 +9,138 @@ import com.thomasdiewald.pixelflow.java.dwgl.DwGLSLProgram;
 
 DwOpticalFlow opticalflow;
 Kinect2 kinect = new Kinect2(this);
-Capture cam;
-PGraphics2D cam_graphics, flow_graphics;
-DwFluid2D.FluidData fluid_data;
+DwGLSLProgram shaderVelocity, shaderDensity;
 DwFluid2D fluid;
 DwPixelFlow context;
 
-final int simWidth = 480;
-final int simHeight = 320;
+// Source graphics (Kinect depth data)
+final int sourceWidth = 512, sourceHeight = 512;
+PGraphics2D sourceGraphics;
 
-final int fluidWidth = 480;
-final int fluidHeight = 320;
+// Optical flow velocity
+final int flowWidth = 200, flowHeight = 200;
+PGraphics2D flowGraphics; 
+
+// Fluid
+final int fluidWidth = 480, fluidHeight = 320;
+PGraphics2D fluidGraphics;
 
 void settings() {
-  size(1024, 740, P3D);
+  size(1024, 768, P3D);
 }
 
 class MyFluidData implements DwFluid2D.FluidData {
-    @Override
-    // this is called during the fluid-simulation update step.
-    public void update(DwFluid2D fluid) {
-      fluid.addVelocity(20, 30, 50, 1.1, 2.2);
-      
-      float px = random(fluidWidth);
-      float py = random(fluidHeight);
-      fluid.addDensity (px, py, 15, 1.0f, 0.0f, 0.40f, 1f, 1);
-      
-    }
+  @Override
+  // this is called during the fluid-simulation update step.
+  public void update(DwFluid2D fluid) {
+    float px = random(fluidWidth);
+    float py = random(fluidHeight);
+    //fluid.addDensity (px, py, 15, 1.0f, 0.0f, 0.40f, 1f, 1);
+  }
 }
-
+ int[] tempArray = new int[1];
+ 
 void setup() {
   kinect = new Kinect2(this);
   kinect.initDepth();
   kinect.initDevice();
   
-  // Just for testing
-  cam = new Capture(this, simWidth, simHeight, 30);
-  cam.start();
-  
-  cam_graphics = (PGraphics2D)createGraphics(simWidth, simWidth, P2D);
-  flow_graphics = (PGraphics2D)createGraphics(1024, 740, P2D);
-  
   context = new DwPixelFlow(this);
-  context.print();
-  context.printGL();
+  
+  // Set up source data
+  sourceGraphics = (PGraphics2D)createGraphics(sourceWidth, sourceHeight, P2D); //<>//
+  
+  // Set up optical flow
+  opticalflow = new DwOpticalFlow(context, flowWidth, flowHeight);
+  
+  flowGraphics = (PGraphics2D)createGraphics(flowWidth, flowHeight, P2D);
     
   // Setup fluid simulation
- 
   fluid = new DwFluid2D(context, fluidWidth, fluidHeight, 1);
-  fluid_data = new MyFluidData();
-  fluid.addCallback_FluiData(fluid_data);
-    
-  // some fluid parameters
-  fluid.param.dissipation_density     = 0.90f;
-  fluid.param.dissipation_velocity    = 0.80f;
-  fluid.param.dissipation_temperature = 0.70f;
-  fluid.param.vorticity               = 0.30f;
-  
-  opticalflow = new DwOpticalFlow(context, simWidth, simHeight);
+  fluid.param.dissipation_density     = 1.0f;
+  fluid.param.dissipation_velocity    = 0.9f;
+  fluid.param.vorticity               = 0.9f;
+  shaderVelocity = context.createShader("addVelocity.frag");
+  shaderDensity = context.createShader("addDensity.frag");
+  fluidGraphics = (PGraphics2D)createGraphics(fluidWidth, fluidHeight, P2D);
 }
 
 /**
  * Loads data from the Kinect into the depthData Mat,
  * and normalizes it between 0.0 and 1.0
  */
-void refreshDepthData() {
+void readSource() {
   if(kinect.getNumKinects() > 0) {
     // Use the real Kinect data
     kinect.getRawDepth(); // TODO
   } else {
-    // No Kinect attached, create a simulation of depth data
+    if(millis() > 3000) {
+      sourceGraphics.beginDraw();
+      sourceGraphics.background(0);
+      //sourceGraphics.image(cam, 0, 0, sourceWidth, sourceHeight);
+      float x = sourceWidth / 2 + sin(millis() / 1800.0) * sourceWidth / 3;
+      float y = sourceWidth / 2 + cos(millis() / 1600.0) * sourceWidth / 4;
+      sourceGraphics.ellipse(x, y, 90, 30);
+      float x2 = sourceWidth / 2 + sin(millis() / 1900.0) * sourceWidth / 3;
+      float y2 = sourceWidth / 2 + cos(millis() / 2100.0) * sourceWidth / 4;
+      sourceGraphics.ellipse(x2, y2, 140, 100);
+      sourceGraphics.endDraw();
+    }
   }
 }
 
 
 void draw() {
+  background(400);
   
-  background(0);
+  readSource();
   
-  if(cam.available()) {
-    cam.read();
-    cam_graphics.beginDraw();
-    cam_graphics.background(0);
-    cam_graphics.image(cam, 0, 0);
-    cam_graphics.endDraw();
-  }
+  // Update optical flow
+  opticalflow.update(sourceGraphics);  
+  flowGraphics.beginDraw();
+  flowGraphics.background(0);
+  flowGraphics.endDraw();
+  opticalflow.renderVelocityShading(flowGraphics);
+
   
-  
-  flow_graphics.beginDraw();
-  flow_graphics.background(0);
-  flow_graphics.endDraw();
-  
-  // Add optical flow velocity to fluid simulation
+  //// Update fluid velocity from optical flow
   context.begin();
   context.beginDraw(fluid.tex_velocity.dst);
-  DwGLSLProgram shader = context.createShader("data/addVelocity.frag");
-  shader.begin();
-  shader.uniform2f     ("wh"             , fluid.fluid_w, fluid.fluid_h);                                                                   
-  shader.uniform1i     ("blend_mode"     , 2);    
-  shader.uniform1f     ("multiplier"     , 1.0f);   
-  shader.uniform1f     ("mix_value"      , 0.1f);
-  shader.uniformTexture("tex_opticalflow", opticalflow.frameCurr.velocity);
-  shader.uniformTexture("tex_velocity_old", fluid.tex_velocity.src);
-  shader.drawFullScreenQuad();
-  shader.end();
+  shaderVelocity.begin();
+  shaderVelocity.uniform2f("wh", fluid.fluid_w, fluid.fluid_h);                                                                   
+  shaderVelocity.uniformTexture("tex_opticalflow", opticalflow.frameCurr.velocity);
+  shaderVelocity.uniformTexture("tex_velocity_old", fluid.tex_velocity.src);
+  shaderVelocity.drawFullScreenQuad();
+  shaderVelocity.end();
   context.endDraw();
-  context.end("app.addDensityTexture");
+  context.end();
+  fluid.tex_velocity.swap();
   
-  fluid.tex_velocity.swap(); 
-  // Update fluid simulation
+  // Add density to fluid
+  colorMode(HSB, 255);
+  color c = color((millis() / 1000.0f * 255.0) % 255.0f, 255, 255);
+  
+  context.begin(); //<>//
+  context.getGLTextureHandle(sourceGraphics, tempArray);
+  int sourceGraphicsGL = tempArray[0];
+  context.beginDraw(fluid.tex_density.dst);
+  shaderDensity.begin(); //<>//
+  shaderDensity.uniform2f("wh", fluid.fluid_w, fluid.fluid_h);
+  shaderDensity.uniform3f("color", red(c) / 255.0, green(c) / 255.0, blue(c) / 255.0);
+  shaderDensity.uniformTexture("texture_old", fluid.tex_density.src);
+  shaderDensity.uniformTexture("texture_new", sourceGraphicsGL);
+  shaderDensity.drawFullScreenQuad();
+  shaderDensity.end();
+  context.endDraw();
+  context.end();
+  fluid.tex_density.swap();  
   fluid.update();
-  background(0);
-  opticalflow.update(cam_graphics);
-  //opticalflow.renderVelocityShading(flow_graphics);
-  // opticalflow.renderVelocityStreams(flow_graphics, 6);
-  fluid.renderFluidTextures(flow_graphics, 0);
   
+
+  fluid.renderFluidTextures(fluidGraphics, 0);
   
-  image(flow_graphics, 0, 0, 1024, 740);
-  
-  
-  // Choose bet
-  //kinect.printDevices();
-  
+  image(fluidGraphics, 0, 0, width, height);
+
   if(debug) {
     drawDebug();
   }
@@ -139,4 +148,32 @@ void draw() {
 
 void drawDebug() {
   // Draw the Kinect data in the top-left
+  int debugWindow = 0;
+  drawGraphics(sourceGraphics, debugWindow++);
+  drawGraphics(flowGraphics, debugWindow++);
+  drawGraphics(fluidGraphics, debugWindow++);
+}
+
+void drawGraphics(PGraphics graphics, int window) {
+  final int debugWidth = 400, debugHeight = 300;
+  image(graphics, 10+(debugWidth+10)*window, 10, debugWidth, debugHeight);
+}
+
+color hsv2rgb(float hue, float saturation, float value) {
+    int h = (int)(hue * 6);
+    float f = hue * 6 - h;
+    float p = value * (1 - saturation);
+    float q = value * (1 - f * saturation);
+    float t = value * (1 - (1 - f) * saturation);
+
+    
+    switch (h) {
+      case 0: return color(value * 255, t * 255, p * 255);
+      case 1: return color(q * 255, value * 255, p * 255);
+      case 2: return color(p * 255, value * 255, t * 255);
+      case 3: return color(p * 255, q * 255, value * 255);
+      case 4: return color(t * 255, p * 255, value * 255);
+      case 5: return color(value * 255, p * 255, q * 255);
+      default: throw new RuntimeException("Something went wrong when converting from HSV to RGB. Input was " + hue + ", " + saturation + ", " + value);
+  }
 }

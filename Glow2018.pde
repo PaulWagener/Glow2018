@@ -26,7 +26,7 @@ final int fluidWidth = 480, fluidHeight = 320;
 PGraphics2D fluidGraphics;
 
 void settings() {
-  size(1024, 768, P3D);
+  size(1200, 1000, P3D);
 }
 
 class MyFluidData implements DwFluid2D.FluidData {
@@ -35,7 +35,7 @@ class MyFluidData implements DwFluid2D.FluidData {
   public void update(DwFluid2D fluid) {
     float px = random(fluidWidth);
     float py = random(fluidHeight);
-    //fluid.addDensity (px, py, 15, 1.0f, 0.0f, 0.40f, 1f, 1);
+    fluid.addDensity (px, py, 15, 1.0f, 0.0f, 0.40f, 1f, 1);
   }
 }
  int[] tempArray = new int[1];
@@ -59,17 +59,13 @@ void setup() {
   fluid = new DwFluid2D(context, fluidWidth, fluidHeight, 1);
   fluid.param.dissipation_density     = 1.0f;
   fluid.param.dissipation_velocity    = 0.9f;
-  fluid.param.vorticity               = 0.9f;
+  fluid.param.vorticity               = 0.4f;
   shaderVelocity = context.createShader("addVelocity.frag");
   shaderDensity = context.createShader("addDensity.frag");
   fluidGraphics = (PGraphics2D)createGraphics(fluidWidth, fluidHeight, P2D);
 }
 
-/**
- * Loads data from the Kinect into the depthData Mat,
- * and normalizes it between 0.0 and 1.0
- */
-void readSource() {
+void draw() {  
   if(kinect.getNumKinects() > 0) {
     // Use the real Kinect data
     kinect.getRawDepth(); // TODO
@@ -78,22 +74,15 @@ void readSource() {
       sourceGraphics.beginDraw();
       sourceGraphics.background(0);
       //sourceGraphics.image(cam, 0, 0, sourceWidth, sourceHeight);
-      float x = sourceWidth / 2 + sin(millis() / 1800.0) * sourceWidth / 3;
-      float y = sourceWidth / 2 + cos(millis() / 1600.0) * sourceWidth / 4;
-      sourceGraphics.ellipse(x, y, 90, 30);
+      float x = sourceWidth / 2 + sin(millis() / 3800.0) * sourceWidth / 3;
+      float y = sourceWidth / 2 + cos(millis() / 3600.0) * sourceWidth / 4;
+      sourceGraphics.ellipse(x, y, 90, 90);
       float x2 = sourceWidth / 2 + sin(millis() / 1900.0) * sourceWidth / 3;
-      float y2 = sourceWidth / 2 + cos(millis() / 2100.0) * sourceWidth / 4;
-      sourceGraphics.ellipse(x2, y2, 140, 100);
+      float y2 = sourceWidth / 2 + cos(millis() / 500.0) * sourceWidth / 4;
+      sourceGraphics.ellipse(x2, y2, 100, 100);
       sourceGraphics.endDraw();
     }
   }
-}
-
-
-void draw() {
-  background(400);
-  
-  readSource();
   
   // Update optical flow
   opticalflow.update(sourceGraphics);  
@@ -103,7 +92,7 @@ void draw() {
   opticalflow.renderVelocityShading(flowGraphics);
 
   
-  //// Update fluid velocity from optical flow
+  // Update fluid velocity from optical flow
   context.begin();
   context.beginDraw(fluid.tex_velocity.dst);
   shaderVelocity.begin();
@@ -124,9 +113,10 @@ void draw() {
   context.getGLTextureHandle(sourceGraphics, tempArray);
   int sourceGraphicsGL = tempArray[0];
   context.beginDraw(fluid.tex_density.dst);
-  shaderDensity.begin(); //<>//
+  shaderDensity.begin();
+  shaderDensity.uniform1f("time", (millis() / 1000.0f) % 1.0f);
   shaderDensity.uniform2f("wh", fluid.fluid_w, fluid.fluid_h);
-  shaderDensity.uniform3f("color", red(c) / 255.0, green(c) / 255.0, blue(c) / 255.0);
+  //shaderDensity.uniform3f("color", red(c) / 255.0, green(c) / 255.0, blue(c) / 255.0);
   shaderDensity.uniformTexture("texture_old", fluid.tex_density.src);
   shaderDensity.uniformTexture("texture_new", sourceGraphicsGL);
   shaderDensity.drawFullScreenQuad();
@@ -134,7 +124,7 @@ void draw() {
   context.endDraw();
   context.end();
   fluid.tex_density.swap();  
-  fluid.update();
+  fluid.update(); //<>//
   
 
   fluid.renderFluidTextures(fluidGraphics, 0);

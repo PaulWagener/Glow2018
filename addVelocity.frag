@@ -15,7 +15,7 @@ void main(){
   vec2 posn = gl_FragCoord.xy / wh;
 
   vec2 data_old = texture(tex_velocity_old, posn).xy;
-  vec2 data_ext = texture(tex_opticalflow , posn).xy;
+  vec2 data_ext = -texture(tex_opticalflow , posn).xy;
 
   vec2 data_new = data_old;
 
@@ -23,7 +23,7 @@ void main(){
 
   if (len > 0.0) {
 
-    data_ext *= 15.0;
+    data_ext *= 5.0;
     if(length(data_old) > length(data_ext)){
       data_new = data_old;
     } else {

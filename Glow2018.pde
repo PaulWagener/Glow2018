@@ -116,21 +116,20 @@ void draw() {
   
   // Add density to fluid  
   context.begin(); //<>//
-  context.getGLTextureHandle(sourceGraphics, tempArray);
-  int sourceGraphicsGL = tempArray[0]; //<>//
-  context.beginDraw(fluid.tex_density.dst);
+  int textureNew = getGL(sourceGraphics);
+  context.beginDraw(fluid.tex_density.dst); //<>//
   shaderDensity.begin();
-  shaderDensity.uniform1f("time", 0);//(millis() / 500.0f) % 1.0f);
+  shaderDensity.uniform1f("time", (millis() / 500.0f) % 1.0f);
   shaderDensity.uniform2f("wh", fluid.fluid_w, fluid.fluid_h);
   shaderDensity.uniformTexture("texture_old", fluid.tex_density.src);
-  shaderDensity.uniformTexture("texture_new", sourceGraphicsGL);
+  shaderDensity.uniformTexture("texture_new", textureNew);
   shaderDensity.drawFullScreenQuad();
   shaderDensity.end();
   context.endDraw();
   context.end();
   fluid.tex_density.swap();  
-  fluid.update(); //<>//
-  
+  fluid.update();
+   //<>//
   // Update particles
   particleSystem.update(fluid);
   
@@ -150,23 +149,31 @@ void draw() {
   fluid.renderFluidTextures(fluidGraphics, 0);
   
   // Overlay particles
-  fluidGraphics.beginDraw();
-  fluidGraphics.blendMode(PConstants.BLEND);  
+  
+  
   context.begin();
+  int textureGlow = getGL(glowGraphics);
+  fluidGraphics.beginDraw();
+  fluidGraphics.blendMode(PConstants.BLEND);
   shaderParticlesRender.begin();
   shaderParticlesRender.uniform2i     ("num_particles", particleSystem.particles_x, particleSystem.particles_y);
   shaderParticlesRender.uniformTexture("tex_particles", particleSystem.tex_particles.src);
+  shaderParticlesRender.uniformTexture("tex_glow", textureGlow);
   shaderParticlesRender.drawFullScreenPoints(particleSystem.particles_x * particleSystem.particles_y);
   shaderParticlesRender.end();
-  context.end("ParticleSystem.render");
-
   fluidGraphics.endDraw();
+  context.end("ParticleSystem.render");
   
   image(fluidGraphics, 0, 0, width, height);
 
   if(debug) {
     drawDebug();
   }
+}
+
+int getGL(PGraphics2D g) {
+  context.getGLTextureHandle(g, tempArray);
+  return tempArray[0];
 }
 
 void drawDebug() {

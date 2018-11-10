@@ -10,6 +10,7 @@
 //uniform vec2      wh_viewport;
 uniform ivec2     num_particles;
 uniform sampler2D tex_particles;
+uniform sampler2D tex_glow;
 
 
 #if SHADER_VERT
@@ -31,9 +32,10 @@ void main(){
   // // get particel pos, vel
   particle = texture(tex_particles, posn);
 
+
   // finish vertex coordinate
   gl_Position = vec4(particle.xy * 2.0 - 1.0, 0, 1); // ndc: [-1, +1]
-  gl_PointSize = length(particle.zw) / 5;
+  gl_PointSize = texture(tex_glow, posn).x;//length(particle.zw) / 5;
 }
 
 #endif // #if SHADER_VERT
@@ -53,6 +55,7 @@ void main(){
 
   //float vel = mod(length(particle.zw) / 20, 0.1) * 10;
   vec3 color = vec3(1, 1, 1);
+  alpha = 1.0;
 
   out_frag = vec4(color, alpha);
 }

@@ -1,7 +1,7 @@
-boolean debug = false;
+boolean debug = true;
 
 boolean paused = false;
-boolean fullscreen = true;
+boolean fullscreen = false;
 boolean calibration = false;
 
 import org.openkinect.processing.*;
@@ -20,8 +20,9 @@ DwFluid2D fluid;
 DwPixelFlow context;
 DwFluidParticleSystem2D particleSystem = new DwFluidParticleSystem2D();
 
-float kinectThresholdTop = 0.5;
-float kinectThresholdBottom = 0.5;
+float kinectThresholdTop = 0.52;
+float kinectThresholdBottom = 0.52;
+int tilt = 0;
 
 PGraphics2D glowGraphics;
 
@@ -150,7 +151,8 @@ void draw() {
   shaderDensity.end();
   context.endDraw();
   context.end();
-  fluid.tex_density.swap();  
+  fluid.tex_density.swap(); 
+  
   fluid.update();
   
   // Update particles
@@ -190,6 +192,7 @@ void draw() {
      
     text("Kinect Threshold Top: " + kinectThresholdTop, 20, 20);
     text("Kinect Threshold Bottom: " + kinectThresholdBottom, 20, 40);
+    text("Kinect tilt: " + tilt, 20, 60);
   } else {
     image(fluidGraphics, 0, 0, width, height);
   
@@ -211,9 +214,7 @@ void drawDebug() {
   drawGraphics(flowGraphics, debugWindow++);
   drawGraphics(glowGraphics, debugWindow++);
   drawGraphics(fluidGraphics, debugWindow++);
-  
-  // Debug values
-  
+ 
 }
 
 public void keyReleased() {
@@ -225,6 +226,16 @@ public void keyReleased() {
   if(key == '=') kinectThresholdBottom += step;
   if(key == '-') kinectThresholdBottom -= step;
   if(key == 'p') paused = !paused;
+  
+  //if (key == CODED) {
+  //  if (keyCode == UP) {
+  //    tilt += 1;
+  //  } else if (keyCode == DOWN) {
+  //    tilt -= 1;
+  //  }
+  //  tilt = constrain(tilt, 0, 30);
+  //  kinect.setTilt(tilt);
+  //}
 }
 
 void drawGraphics(PGraphics graphics, int window) {

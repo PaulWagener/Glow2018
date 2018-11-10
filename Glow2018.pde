@@ -1,5 +1,7 @@
 boolean debug = true;
 
+boolean paused = false;
+
 import org.openkinect.processing.*;
 import com.thomasdiewald.pixelflow.java.imageprocessing.DwOpticalFlow;
 import processing.video.Capture;
@@ -29,7 +31,7 @@ final int flowWidth = 200, flowHeight = 200;
 PGraphics2D flowGraphics; 
 
 // Fluid
-final int fluidWidth = 480, fluidHeight = 320;
+final int fluidWidth = 800, fluidHeight = 600;
 PGraphics2D fluidGraphics;
 
 void settings() {
@@ -49,9 +51,9 @@ void setup() {
   glowGraphics.endDraw();
   
   // Set up source data
-  sourceGraphics = (PGraphics2D)createGraphics(sourceWidth, sourceHeight, P2D);
+  sourceGraphics = (PGraphics2D)createGraphics(sourceWidth, sourceHeight, P2D); //<>//
   
-  // Set up optical flow //<>//
+  // Set up optical flow
   opticalflow = new DwOpticalFlow(context, flowWidth, flowHeight);
   
   flowGraphics = (PGraphics2D)createGraphics(flowWidth, flowHeight, P2D);
@@ -61,6 +63,7 @@ void setup() {
   fluid.param.dissipation_density     = 1.0f;
   fluid.param.dissipation_velocity    = 0.9f;
   fluid.param.vorticity               = 0.4f;
+  fluid.param.num_jacobi_projection   = 6;
   shaderVelocity = context.createShader("addVelocity.frag");
   shaderDensity = context.createShader("addDensity.frag");
   fluidGraphics = (PGraphics2D)createGraphics(fluidWidth, fluidHeight, P2D);
@@ -81,14 +84,17 @@ void draw() {
     
   } else {
     if(millis() > 3000) {
+      float millis = millis();
       sourceGraphics.beginDraw();
       sourceGraphics.background(0);
-      float x = sourceWidth / 2 + sin(millis() / 3800.0) * sourceWidth / 3;
-      float y = sourceWidth / 2 + cos(millis() / 3600.0) * sourceWidth / 4;
-      sourceGraphics.ellipse(x, y, 90, 90);
-      float x2 = sourceWidth / 2 + sin(millis() / 1900.0) * sourceWidth / 3;
-      float y2 = sourceWidth / 2 + cos(millis() / 500.0) * sourceWidth / 4;
-      sourceGraphics.ellipse(x2, y2, 100, 100);
+      if(!paused) {
+        float x = sourceWidth / 2 + sin(millis / 3800.0) * sourceWidth / 3;
+        float y = sourceWidth / 2 + cos(millis / 3600.0) * sourceWidth / 4;
+        sourceGraphics.ellipse(x, y, 90, 90);
+        float x2 = sourceWidth / 2 + sin(millis / 1900.0) * sourceWidth / 3;
+        float y2 = sourceWidth / 2 + cos(millis / 500.0) * sourceWidth / 4;
+        sourceGraphics.ellipse(x2, y2, 100, 100);
+      }
       sourceGraphics.endDraw();
     }
   }
@@ -111,25 +117,25 @@ void draw() {
   shaderVelocity.drawFullScreenQuad();
   shaderVelocity.end();
   context.endDraw();
-  context.end();
+  context.end(); //<>//
   fluid.tex_velocity.swap();
   
   // Add density to fluid  
   context.begin(); //<>//
   int textureNew = getGL(sourceGraphics);
-  context.beginDraw(fluid.tex_density.dst); //<>//
+  context.beginDraw(fluid.tex_density.dst);
   shaderDensity.begin();
   shaderDensity.uniform1f("time", (millis() / 500.0f) % 1.0f);
   shaderDensity.uniform2f("wh", fluid.fluid_w, fluid.fluid_h);
   shaderDensity.uniformTexture("texture_old", fluid.tex_density.src);
   shaderDensity.uniformTexture("texture_new", textureNew);
-  shaderDensity.drawFullScreenQuad();
+  shaderDensity.drawFullScreenQuad(); //<>//
   shaderDensity.end();
   context.endDraw();
   context.end();
   fluid.tex_density.swap();  
   fluid.update();
-   //<>//
+  
   // Update particles
   particleSystem.update(fluid);
   
@@ -194,6 +200,7 @@ public void keyReleased(){
   if(key == '_') kinectThresholdFar -= 10;
   if(key == '=') kinectThresholdNear += 10;
   if(key == '-') kinectThresholdNear -= 10;
+  if(key == 'p') paused = !paused;
 }
 
 void drawGraphics(PGraphics graphics, int window) {

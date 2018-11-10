@@ -14,11 +14,10 @@ void main(){
   // Original position
   vec2 reset_position = gl_FragCoord.xy / wh_particles;
 
+  // Force back to original position
+  vec2 vectorBack = reset_position - particle_data.xy;
 
-  if(distance(particle_data.xy, reset_position) > 0.3 && length(particle_data.zw) < 0.0000001) {
-    particle_data.xy = reset_position;
-    particle_data.zw = vec2(0, 0);
-  }
+  particle_data.xy += vectorBack / 300;
 
   glFragColor = particle_data;
 }

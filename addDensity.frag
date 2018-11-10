@@ -37,7 +37,7 @@ void main(){
   float gray = (data_old.x + data_old.y + data_old.z) / 3.0;
   vec4 data_old_gray = vec4(gray, gray, gray, 1.0);
 
-  data_old = mix(data_old, data_old_gray, 0.005);
+  data_old = mix(data_old, vec4(0, 0, 0, 1), 0.001);
 
   float mix = 0.0;
 

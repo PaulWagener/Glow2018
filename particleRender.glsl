@@ -16,6 +16,8 @@ uniform sampler2D tex_glow;
 #if SHADER_VERT
 
 out vec4 particle;
+out float glowAlpha;
+out vec2 posn;
 
 void main(){
 
@@ -27,15 +29,15 @@ void main(){
   int col = point_id - num_particles.x * row;
 
   // // compute texture location [0, 1]
-  vec2 posn = (vec2(col, row)+0.5) / vec2(num_particles);
+  posn = (vec2(col, row)+0.5) / vec2(num_particles);
 
-  // // get particel pos, vel
+  // // get particle pos, vel
   particle = texture(tex_particles, posn);
-
 
   // finish vertex coordinate
   gl_Position = vec4(particle.xy * 2.0 - 1.0, 0, 1); // ndc: [-1, +1]
-  gl_PointSize = texture(tex_glow, posn).x;//length(particle.zw) / 5;
+  gl_PointSize = 1;
+  glowAlpha = texture(tex_glow, posn).x;
 }
 
 #endif // #if SHADER_VERT
@@ -43,21 +45,32 @@ void main(){
 #if SHADER_FRAG
 
 in vec4 particle;
+in float glowAlpha;
+in vec2 posn;
 
 out vec4 out_frag;
 
 void main(){
-  float alpha = length(particle.zw) / 20;
+  if(glowAlpha > 0) {
 
-  if(alpha > 0.4) {
-    alpha = 0.4;
+
+    float alpha = glowAlpha;
+
+    float distance = distance(posn, particle.xy);
+    //distance = 0;
+    alpha /= distance * 20;
+    //alpha /= distance;
+    //float vel = mod(length(particle.zw) / 20, 0.1) * 10;
+    vec3 color = vec3(1, 1, 1);
+
+    if(alpha < 0.3) {
+      alpha = 0.3;
+    }
+
+    out_frag = vec4(color, alpha);
+  } else {
+    out_frag = vec4(0, 0, 0, 0);
   }
-
-  //float vel = mod(length(particle.zw) / 20, 0.1) * 10;
-  vec3 color = vec3(1, 1, 1);
-  alpha = 1.0;
-
-  out_frag = vec4(color, alpha);
 }
 
 

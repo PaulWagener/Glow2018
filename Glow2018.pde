@@ -1,7 +1,7 @@
-boolean debug = true;
+boolean debug = false;
 
 boolean paused = false;
-boolean fullscreen = false;
+boolean fullscreen = true;
 boolean calibration = false;
 
 import org.openkinect.processing.*;
@@ -38,7 +38,11 @@ final int fluidWidth = 800, fluidHeight = 600;
 PGraphics2D fluidGraphics;
 
 void settings() {
-  size(1200, 900, P3D);                  
+  if(fullscreen) {
+    fullScreen(P3D, 2);
+  } else {
+    size(1200, 900, P3D);
+  }
 }
 
  int[] tempArray = new int[1];

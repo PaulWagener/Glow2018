@@ -1,6 +1,8 @@
 boolean debug = true;
 
 boolean paused = false;
+boolean fullscreen = false;
+boolean calibration = false;
 
 import org.openkinect.processing.*;
 import com.thomasdiewald.pixelflow.java.imageprocessing.DwOpticalFlow;
@@ -13,12 +15,13 @@ import com.thomasdiewald.pixelflow.java.fluid.DwFluidParticleSystem2D;
 DwOpticalFlow opticalflow;
 Kinect kinect = new Kinect(this);
 DwGLSLProgram shaderVelocity, shaderDensity, shaderParticles, shaderParticlesRender;
+PShader shaderKinect;
 DwFluid2D fluid;
 DwPixelFlow context;
 DwFluidParticleSystem2D particleSystem = new DwFluidParticleSystem2D();
 
-int kinectThresholdNear = 10;
-int kinectThresholdFar = 20;
+float kinectThresholdTop = 0.5;
+float kinectThresholdBottom = 0.5;
 
 PGraphics2D glowGraphics;
 
@@ -27,7 +30,7 @@ final int sourceWidth = 512, sourceHeight = 512;
 PGraphics2D sourceGraphics;
 
 // Optical flow velocity
-final int flowWidth = 200, flowHeight = 200;
+final int flowWidth = sourceWidth, flowHeight = sourceHeight;
 PGraphics2D flowGraphics; 
 
 // Fluid
@@ -35,7 +38,7 @@ final int fluidWidth = 800, fluidHeight = 600;
 PGraphics2D fluidGraphics;
 
 void settings() {
-  size(1200, 900, P3D);
+  size(1200, 900, P3D);                  
 }
 
  int[] tempArray = new int[1];
@@ -52,6 +55,7 @@ void setup() {
   
   // Set up source data
   sourceGraphics = (PGraphics2D)createGraphics(sourceWidth, sourceHeight, P2D); //<>//
+  shaderKinect = loadShader("kinect.frag", "kinect.vert");
   
   // Set up optical flow
   opticalflow = new DwOpticalFlow(context, flowWidth, flowHeight);
@@ -78,12 +82,21 @@ void setup() {
 
 void draw() {
   background(0);
-  if(kinect.numDevices() > 0) {
-    sourceGraphics = (PGraphics2D)kinect.getDepthImage();
-    // TODO: Threshold
-    
-  } else {
-    if(millis() > 3000) {
+  if(millis() > 3000) {
+    if(kinect.numDevices() > 0) {
+      PImage depthImage = kinect.getDepthImage();
+      sourceGraphics.beginDraw();
+      
+      //sourceGraphics.image(depthImage, 0, 0, sourceWidth, sourceHeight);
+      //sourceGraphics.texture(depthImage);
+      shaderKinect.set("texmex", depthImage);
+      shaderKinect.set("thresholdTop", kinectThresholdTop);
+      shaderKinect.set("thresholdBottom", kinectThresholdBottom);
+      shaderKinect.set("debug", calibration);
+      sourceGraphics.filter(shaderKinect);
+      sourceGraphics.endDraw();
+      
+    } else {
       float millis = millis();
       sourceGraphics.beginDraw();
       sourceGraphics.background(0);
@@ -114,10 +127,10 @@ void draw() {
   shaderVelocity.uniform2f("wh", fluid.fluid_w, fluid.fluid_h);                                                                   
   shaderVelocity.uniformTexture("tex_opticalflow", opticalflow.frameCurr.velocity);
   shaderVelocity.uniformTexture("tex_velocity_old", fluid.tex_velocity.src);
-  shaderVelocity.drawFullScreenQuad();
+  shaderVelocity.drawFullScreenQuad(); //<>//
   shaderVelocity.end();
   context.endDraw();
-  context.end(); //<>//
+  context.end();
   fluid.tex_velocity.swap();
   
   // Add density to fluid  
@@ -126,10 +139,10 @@ void draw() {
   context.beginDraw(fluid.tex_density.dst);
   shaderDensity.begin();
   shaderDensity.uniform1f("time", (millis() / 500.0f) % 1.0f);
-  shaderDensity.uniform2f("wh", fluid.fluid_w, fluid.fluid_h);
+  shaderDensity.uniform2f("wh", fluid.fluid_w, fluid.fluid_h); //<>//
   shaderDensity.uniformTexture("texture_old", fluid.tex_density.src);
   shaderDensity.uniformTexture("texture_new", textureNew);
-  shaderDensity.drawFullScreenQuad(); //<>//
+  shaderDensity.drawFullScreenQuad();
   shaderDensity.end();
   context.endDraw();
   context.end();
@@ -155,8 +168,6 @@ void draw() {
   fluid.renderFluidTextures(fluidGraphics, 0);
   
   // Overlay particles
-  
-  
   context.begin();
   int textureGlow = getGL(glowGraphics);
   fluidGraphics.beginDraw();
@@ -170,10 +181,17 @@ void draw() {
   fluidGraphics.endDraw();
   context.end("ParticleSystem.render");
   
-  image(fluidGraphics, 0, 0, width, height);
-
-  if(debug) {
-    drawDebug();
+  if(calibration) {
+    image(sourceGraphics, 0, 0, width, height);
+     
+    text("Kinect Threshold Top: " + kinectThresholdTop, 20, 20);
+    text("Kinect Threshold Bottom: " + kinectThresholdBottom, 20, 40);
+  } else {
+    image(fluidGraphics, 0, 0, width, height);
+  
+    if(debug) {
+      drawDebug();
+    }
   }
 }
 
@@ -191,19 +209,21 @@ void drawDebug() {
   drawGraphics(fluidGraphics, debugWindow++);
   
   // Debug values
-  text("Kinect Threshold Near: " + kinectThresholdNear, 20, 325);
-  text("Kinect Threshold Far: " + kinectThresholdFar, 20, 340);
+  
 }
 
-public void keyReleased(){
-  if(key == '+') kinectThresholdFar += 10;
-  if(key == '_') kinectThresholdFar -= 10;
-  if(key == '=') kinectThresholdNear += 10;
-  if(key == '-') kinectThresholdNear -= 10;
+public void keyReleased() {
+  if(key == 'c') calibration = !calibration;
+  
+  double step = 0.01;
+  if(key == '+') kinectThresholdTop += step;
+  if(key == '_') kinectThresholdTop -= step;
+  if(key == '=') kinectThresholdBottom += step;
+  if(key == '-') kinectThresholdBottom -= step;
   if(key == 'p') paused = !paused;
 }
 
 void drawGraphics(PGraphics graphics, int window) {
-  final int debugWidth = 100, debugHeight = 100;
+  final int debugWidth = 300, debugHeight = 300;
   image(graphics, 10+(debugWidth+10)*window, 10, debugWidth, debugHeight);
 }

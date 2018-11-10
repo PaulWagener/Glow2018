@@ -33,18 +33,17 @@ void main(){
   vec4 data_old = texture(texture_old, posn);
   vec4 data_new = texture(texture_new, posn);
 
-  // Slightly gray out old data_new
-  float gray = (data_old.x + data_old.y + data_old.z) / 3.0;
-  vec4 data_old_gray = vec4(gray, gray, gray, 1.0);
-
-  data_old = mix(data_old, vec4(0, 0, 0, 1), 0.001);
+  // Darken background
+  if(length(data_old.xyz) > 0.3) {
+    data_old = mix(data_old, vec4(0, 0, 0, 1), 0.001);
+  }
 
   float mix = 0.0;
 
   float length = length(data_new.xyz);
 
-  if(length > 0.5) {
-    mix = length;
+  if(length > 0.0) {
+    mix = 1.0;
   }
 
   vec3 color = hsv2rgb(mod(time + posn.x + posn.y, 1.0), 1.0, (sin(posn.x*20.0 - posn.y * 12 + time * 3.1415 * 2) + 2.5) / 2.0);

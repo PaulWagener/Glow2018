@@ -34,7 +34,7 @@ final int flowWidth = sourceWidth, flowHeight = sourceHeight;
 PGraphics2D flowGraphics; 
 
 // Fluid
-final int fluidWidth = 800, fluidHeight = 600;
+final int fluidWidth = 1024, fluidHeight = 768;
 PGraphics2D fluidGraphics;
 
 void settings() {
@@ -71,7 +71,7 @@ void setup() {
   fluid.param.dissipation_density     = 1.0f;
   fluid.param.dissipation_velocity    = 0.9f;
   fluid.param.vorticity               = 0.4f;
-  fluid.param.num_jacobi_projection   = 6;
+  //fluid.param.num_jacobi_projection   = 10;
   shaderVelocity = context.createShader("addVelocity.frag");
   shaderDensity = context.createShader("addDensity.frag");
   fluidGraphics = (PGraphics2D)createGraphics(fluidWidth, fluidHeight, P2D);

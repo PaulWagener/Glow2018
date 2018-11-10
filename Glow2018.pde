@@ -18,6 +18,8 @@ DwFluidParticleSystem2D particleSystem = new DwFluidParticleSystem2D();
 int kinectThresholdNear = 10;
 int kinectThresholdFar = 20;
 
+PGraphics2D glowGraphics;
+
 // Source graphics (Kinect depth data)
 final int sourceWidth = 512, sourceHeight = 512;
 PGraphics2D sourceGraphics;
@@ -40,10 +42,16 @@ void setup() {
   kinect.initDepth();
   context = new DwPixelFlow(this);
   
-  // Set up source data
-  sourceGraphics = (PGraphics2D)createGraphics(sourceWidth, sourceHeight, P2D); //<>//
+  PImage glowImage = loadImage("glow.png"); 
+  glowGraphics = (PGraphics2D)createGraphics(glowImage.width, glowImage.height, P2D);
+  glowGraphics.beginDraw();
+  glowGraphics.image(glowImage, 0, 0);
+  glowGraphics.endDraw();
   
-  // Set up optical flow
+  // Set up source data
+  sourceGraphics = (PGraphics2D)createGraphics(sourceWidth, sourceHeight, P2D);
+  
+  // Set up optical flow //<>//
   opticalflow = new DwOpticalFlow(context, flowWidth, flowHeight);
   
   flowGraphics = (PGraphics2D)createGraphics(flowWidth, flowHeight, P2D);
@@ -109,7 +117,7 @@ void draw() {
   // Add density to fluid  
   context.begin(); //<>//
   context.getGLTextureHandle(sourceGraphics, tempArray);
-  int sourceGraphicsGL = tempArray[0];
+  int sourceGraphicsGL = tempArray[0]; //<>//
   context.beginDraw(fluid.tex_density.dst);
   shaderDensity.begin();
   shaderDensity.uniform1f("time", 0);//(millis() / 500.0f) % 1.0f);
@@ -138,14 +146,12 @@ void draw() {
   
   particleSystem.tex_particles.swap();
   
-  // Draw fluid + particles
-
+  // Draw fluid
   fluid.renderFluidTextures(fluidGraphics, 0);
-  //particleSystem.render(fluidGraphics, null, 0);
   
+  // Overlay particles
   fluidGraphics.beginDraw();
-  fluidGraphics.blendMode(PConstants.BLEND);
-  
+  fluidGraphics.blendMode(PConstants.BLEND);  
   context.begin();
   shaderParticlesRender.begin();
   shaderParticlesRender.uniform2i     ("num_particles", particleSystem.particles_x, particleSystem.particles_y);
@@ -168,6 +174,7 @@ void drawDebug() {
   int debugWindow = 0;
   drawGraphics(sourceGraphics, debugWindow++);
   drawGraphics(flowGraphics, debugWindow++);
+  drawGraphics(glowGraphics, debugWindow++);
   drawGraphics(fluidGraphics, debugWindow++);
   
   // Debug values

@@ -6,12 +6,16 @@ import processing.video.Capture;
 import com.thomasdiewald.pixelflow.java.fluid.DwFluid2D;
 import com.thomasdiewald.pixelflow.java.DwPixelFlow;
 import com.thomasdiewald.pixelflow.java.dwgl.DwGLSLProgram;
+import com.thomasdiewald.pixelflow.java.fluid.DwFluidParticleSystem2D;
 
 DwOpticalFlow opticalflow;
 Kinect2 kinect = new Kinect2(this);
-DwGLSLProgram shaderVelocity, shaderDensity;
+DwGLSLProgram shaderVelocity, shaderDensity, shaderParticles, shaderParticlesRender;
 DwFluid2D fluid;
+MyFluidData fluidData = new MyFluidData();
 DwPixelFlow context;
+DwFluidParticleSystem2D particleSystem = new DwFluidParticleSystem2D();
+
 
 // Source graphics (Kinect depth data)
 final int sourceWidth = 512, sourceHeight = 512;
@@ -24,9 +28,10 @@ PGraphics2D flowGraphics;
 // Fluid
 final int fluidWidth = 480, fluidHeight = 320;
 PGraphics2D fluidGraphics;
+PGraphics2D obstacleGraphics;
 
 void settings() {
-  size(1200, 1000, P3D);
+  size(800, 600, P3D);
 }
 
 class MyFluidData implements DwFluid2D.FluidData {
@@ -35,7 +40,7 @@ class MyFluidData implements DwFluid2D.FluidData {
   public void update(DwFluid2D fluid) {
     float px = random(fluidWidth);
     float py = random(fluidHeight);
-    fluid.addDensity (px, py, 15, 1.0f, 0.0f, 0.40f, 1f, 1);
+    // fluid.addDensity (px, py, 5, 0.0f, 0.0f, 0.90f, 1f, 1);
   }
 }
  int[] tempArray = new int[1];
@@ -60,12 +65,34 @@ void setup() {
   fluid.param.dissipation_density     = 1.0f;
   fluid.param.dissipation_velocity    = 0.9f;
   fluid.param.vorticity               = 0.4f;
+  fluid.addCallback_FluiData(fluidData);
   shaderVelocity = context.createShader("addVelocity.frag");
   shaderDensity = context.createShader("addDensity.frag");
   fluidGraphics = (PGraphics2D)createGraphics(fluidWidth, fluidHeight, P2D);
+  
+  // Particles
+  particleSystem.resize(context, fluidWidth, fluidHeight);
+  shaderParticles  = context.createShader("particles.frag");
+  shaderParticlesRender = context.createShader("particleRender.glsl", "particleRender.glsl");
+  shaderParticlesRender.vert.setDefine("SHADER_VERT", 1);
+  shaderParticlesRender.frag.setDefine("SHADER_FRAG", 1);
+  
+  // Obstacles (border)
+  obstacleGraphics = (PGraphics2D)createGraphics(fluidWidth, fluidHeight, P2D);
+  obstacleGraphics.beginDraw();
+  obstacleGraphics.clear();
+  obstacleGraphics.strokeWeight(10);
+  obstacleGraphics.stroke(0);
+  
+  obstacleGraphics.noFill();
+  obstacleGraphics.rect(0, 0, obstacleGraphics.width, obstacleGraphics.height);
+  obstacleGraphics.endDraw();
+  
+  //fluid.addObstacles(obstacleGraphics);
 }
 
-void draw() {  
+void draw() {
+  background(0);
   if(kinect.getNumKinects() > 0) {
     // Use the real Kinect data
     kinect.getRawDepth(); // TODO
@@ -105,18 +132,14 @@ void draw() {
   context.end();
   fluid.tex_velocity.swap();
   
-  // Add density to fluid
-  colorMode(HSB, 255);
-  color c = color((millis() / 1000.0f * 255.0) % 255.0f, 255, 255);
-  
+  // Add density to fluid  
   context.begin(); //<>//
   context.getGLTextureHandle(sourceGraphics, tempArray);
   int sourceGraphicsGL = tempArray[0];
   context.beginDraw(fluid.tex_density.dst);
   shaderDensity.begin();
-  shaderDensity.uniform1f("time", (millis() / 1000.0f) % 1.0f);
+  shaderDensity.uniform1f("time", 0);//(millis() / 500.0f) % 1.0f);
   shaderDensity.uniform2f("wh", fluid.fluid_w, fluid.fluid_h);
-  //shaderDensity.uniform3f("color", red(c) / 255.0, green(c) / 255.0, blue(c) / 255.0);
   shaderDensity.uniformTexture("texture_old", fluid.tex_density.src);
   shaderDensity.uniformTexture("texture_new", sourceGraphicsGL);
   shaderDensity.drawFullScreenQuad();
@@ -126,8 +149,44 @@ void draw() {
   fluid.tex_density.swap();  
   fluid.update(); //<>//
   
+  // Update particles
+  particleSystem.update(fluid);
+  
+  //particleSystem.tex_particles.swap();
+  context.begin();
+  context.beginDraw(particleSystem.tex_particles.dst);
+  shaderParticles.begin();
+  shaderParticles.uniform2f("wh_particles", particleSystem.particles_x, particleSystem.particles_y);
+  shaderParticles.uniformTexture("tex_particles", particleSystem.tex_particles.src);
+  shaderParticles.drawFullScreenQuad();
+  shaderParticles.end();
+  context.endDraw();
+  context.end("ParticleSystem.update");
+  
+  particleSystem.tex_particles.swap();
+  
+  
+  
+  
+  // Draw fluid + particles
 
   fluid.renderFluidTextures(fluidGraphics, 0);
+  //particleSystem.render(fluidGraphics, null, 0);
+  
+  fluidGraphics.beginDraw();
+  fluidGraphics.blendMode(PConstants.BLEND);
+  //if(background == 0) dst.blendMode(PConstants.ADD); // works nicely on black background
+  
+  context.begin();
+  shaderParticlesRender.begin();
+  //shaderParticlesRender.uniform2f     ("wh_viewport", w, h);
+  shaderParticlesRender.uniform2i     ("num_particles", particleSystem.particles_x, particleSystem.particles_y);
+  shaderParticlesRender.uniformTexture("tex_particles", particleSystem.tex_particles.src);
+  shaderParticlesRender.drawFullScreenPoints(particleSystem.particles_x * particleSystem.particles_y);
+  shaderParticlesRender.end();
+  context.end("ParticleSystem.render");
+
+  fluidGraphics.endDraw();
   
   image(fluidGraphics, 0, 0, width, height);
 
@@ -147,23 +206,4 @@ void drawDebug() {
 void drawGraphics(PGraphics graphics, int window) {
   final int debugWidth = 400, debugHeight = 300;
   image(graphics, 10+(debugWidth+10)*window, 10, debugWidth, debugHeight);
-}
-
-color hsv2rgb(float hue, float saturation, float value) {
-    int h = (int)(hue * 6);
-    float f = hue * 6 - h;
-    float p = value * (1 - saturation);
-    float q = value * (1 - f * saturation);
-    float t = value * (1 - (1 - f) * saturation);
-
-    
-    switch (h) {
-      case 0: return color(value * 255, t * 255, p * 255);
-      case 1: return color(q * 255, value * 255, p * 255);
-      case 2: return color(p * 255, value * 255, t * 255);
-      case 3: return color(p * 255, q * 255, value * 255);
-      case 4: return color(t * 255, p * 255, value * 255);
-      case 5: return color(value * 255, p * 255, q * 255);
-      default: throw new RuntimeException("Something went wrong when converting from HSV to RGB. Input was " + hue + ", " + saturation + ", " + value);
-  }
 }

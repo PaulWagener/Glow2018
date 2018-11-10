@@ -47,7 +47,7 @@ void main(){
     mix = length;
   }
 
-  vec3 color = hsv2rgb((time + posn.x + posn.y) / 3.0, 1.0, 1.0);
+  vec3 color = hsv2rgb(mod(time + posn.x + posn.y, 1.0), 1.0, (sin(posn.x*20.0 - posn.y * 12 + time * 3.1415 * 2) + 2.5) / 2.0);
 
   glFragColor = mix(data_old, vec4(color, 1.0), mix);
 }

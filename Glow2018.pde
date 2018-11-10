@@ -1,4 +1,4 @@
-boolean debug = false;
+boolean debug = true;
 
 import org.openkinect.processing.*;
 import com.thomasdiewald.pixelflow.java.imageprocessing.DwOpticalFlow;
@@ -9,13 +9,14 @@ import com.thomasdiewald.pixelflow.java.dwgl.DwGLSLProgram;
 import com.thomasdiewald.pixelflow.java.fluid.DwFluidParticleSystem2D;
 
 DwOpticalFlow opticalflow;
-Kinect2 kinect = new Kinect2(this);
+Kinect kinect = new Kinect(this);
 DwGLSLProgram shaderVelocity, shaderDensity, shaderParticles, shaderParticlesRender;
 DwFluid2D fluid;
-MyFluidData fluidData = new MyFluidData();
 DwPixelFlow context;
 DwFluidParticleSystem2D particleSystem = new DwFluidParticleSystem2D();
 
+int kinectThresholdNear = 10;
+int kinectThresholdFar = 20;
 
 // Source graphics (Kinect depth data)
 final int sourceWidth = 512, sourceHeight = 512;
@@ -28,28 +29,15 @@ PGraphics2D flowGraphics;
 // Fluid
 final int fluidWidth = 480, fluidHeight = 320;
 PGraphics2D fluidGraphics;
-PGraphics2D obstacleGraphics;
 
 void settings() {
-  size(800, 600, P3D);
+  size(1200, 900, P3D);
 }
 
-class MyFluidData implements DwFluid2D.FluidData {
-  @Override
-  // this is called during the fluid-simulation update step.
-  public void update(DwFluid2D fluid) {
-    float px = random(fluidWidth);
-    float py = random(fluidHeight);
-    // fluid.addDensity (px, py, 5, 0.0f, 0.0f, 0.90f, 1f, 1);
-  }
-}
  int[] tempArray = new int[1];
  
 void setup() {
-  kinect = new Kinect2(this);
   kinect.initDepth();
-  kinect.initDevice();
-  
   context = new DwPixelFlow(this);
   
   // Set up source data
@@ -65,7 +53,6 @@ void setup() {
   fluid.param.dissipation_density     = 1.0f;
   fluid.param.dissipation_velocity    = 0.9f;
   fluid.param.vorticity               = 0.4f;
-  fluid.addCallback_FluiData(fluidData);
   shaderVelocity = context.createShader("addVelocity.frag");
   shaderDensity = context.createShader("addDensity.frag");
   fluidGraphics = (PGraphics2D)createGraphics(fluidWidth, fluidHeight, P2D);
@@ -76,31 +63,18 @@ void setup() {
   shaderParticlesRender = context.createShader("particleRender.glsl", "particleRender.glsl");
   shaderParticlesRender.vert.setDefine("SHADER_VERT", 1);
   shaderParticlesRender.frag.setDefine("SHADER_FRAG", 1);
-  
-  // Obstacles (border)
-  obstacleGraphics = (PGraphics2D)createGraphics(fluidWidth, fluidHeight, P2D);
-  obstacleGraphics.beginDraw();
-  obstacleGraphics.clear();
-  obstacleGraphics.strokeWeight(10);
-  obstacleGraphics.stroke(0);
-  
-  obstacleGraphics.noFill();
-  obstacleGraphics.rect(0, 0, obstacleGraphics.width, obstacleGraphics.height);
-  obstacleGraphics.endDraw();
-  
-  //fluid.addObstacles(obstacleGraphics);
 }
 
 void draw() {
   background(0);
-  if(kinect.getNumKinects() > 0) {
-    // Use the real Kinect data
-    kinect.getRawDepth(); // TODO
+  if(kinect.numDevices() > 0) {
+    sourceGraphics = (PGraphics2D)kinect.getDepthImage();
+    // TODO: Threshold
+    
   } else {
     if(millis() > 3000) {
       sourceGraphics.beginDraw();
       sourceGraphics.background(0);
-      //sourceGraphics.image(cam, 0, 0, sourceWidth, sourceHeight);
       float x = sourceWidth / 2 + sin(millis() / 3800.0) * sourceWidth / 3;
       float y = sourceWidth / 2 + cos(millis() / 3600.0) * sourceWidth / 4;
       sourceGraphics.ellipse(x, y, 90, 90);
@@ -152,7 +126,6 @@ void draw() {
   // Update particles
   particleSystem.update(fluid);
   
-  //particleSystem.tex_particles.swap();
   context.begin();
   context.beginDraw(particleSystem.tex_particles.dst);
   shaderParticles.begin();
@@ -165,9 +138,6 @@ void draw() {
   
   particleSystem.tex_particles.swap();
   
-  
-  
-  
   // Draw fluid + particles
 
   fluid.renderFluidTextures(fluidGraphics, 0);
@@ -175,11 +145,9 @@ void draw() {
   
   fluidGraphics.beginDraw();
   fluidGraphics.blendMode(PConstants.BLEND);
-  //if(background == 0) dst.blendMode(PConstants.ADD); // works nicely on black background
   
   context.begin();
   shaderParticlesRender.begin();
-  //shaderParticlesRender.uniform2f     ("wh_viewport", w, h);
   shaderParticlesRender.uniform2i     ("num_particles", particleSystem.particles_x, particleSystem.particles_y);
   shaderParticlesRender.uniformTexture("tex_particles", particleSystem.tex_particles.src);
   shaderParticlesRender.drawFullScreenPoints(particleSystem.particles_x * particleSystem.particles_y);
@@ -201,9 +169,20 @@ void drawDebug() {
   drawGraphics(sourceGraphics, debugWindow++);
   drawGraphics(flowGraphics, debugWindow++);
   drawGraphics(fluidGraphics, debugWindow++);
+  
+  // Debug values
+  text("Kinect Threshold Near: " + kinectThresholdNear, 20, 325);
+  text("Kinect Threshold Far: " + kinectThresholdFar, 20, 340);
+}
+
+public void keyReleased(){
+  if(key == '+') kinectThresholdFar += 10;
+  if(key == '_') kinectThresholdFar -= 10;
+  if(key == '=') kinectThresholdNear += 10;
+  if(key == '-') kinectThresholdNear -= 10;
 }
 
 void drawGraphics(PGraphics graphics, int window) {
-  final int debugWidth = 400, debugHeight = 300;
+  final int debugWidth = 100, debugHeight = 100;
   image(graphics, 10+(debugWidth+10)*window, 10, debugWidth, debugHeight);
 }

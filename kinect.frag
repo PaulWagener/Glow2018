@@ -21,7 +21,7 @@ void main()
     if(depth < threshold) {
       gl_FragColor = vec4(0, (debug ? 0.5 : 0), 0, 1);
     } else {
-      depth = map(depth, threshold, 1.0, 0.0, 1.0);
+      depth = map(depth, threshold, 1.0, 0.5, 1.0);
       gl_FragColor = vec4(depth, depth, depth, 1);
     }
   }

@@ -1,7 +1,7 @@
-boolean debug = true;
+boolean debug = false;
 
 boolean paused = false;
-boolean fullscreen = false;
+boolean fullscreen = true;
 boolean calibration = false;
 
 import org.openkinect.processing.*;
@@ -92,8 +92,8 @@ void draw() {
       PImage depthImage = kinect.getDepthImage();
       sourceGraphics.beginDraw();
       
-      //sourceGraphics.image(depthImage, 0, 0, sourceWidth, sourceHeight);
-      //sourceGraphics.texture(depthImage);
+      sourceGraphics.image(depthImage, 0, 0, sourceWidth, sourceHeight);
+      sourceGraphics.texture(depthImage);
       shaderKinect.set("texmex", depthImage);
       shaderKinect.set("thresholdTop", kinectThresholdTop);
       shaderKinect.set("thresholdBottom", kinectThresholdBottom);

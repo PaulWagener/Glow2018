@@ -3,6 +3,7 @@ boolean debug = false;
 boolean paused = false;
 boolean fullscreen = true;
 boolean calibration = false;
+boolean useKinect = false;
 
 import org.openkinect.processing.*;
 import com.thomasdiewald.pixelflow.java.imageprocessing.DwOpticalFlow;
@@ -88,7 +89,7 @@ void setup() {
 void draw() {
   background(0);
   if(millis() > 3000) {
-    if(kinect.numDevices() > 0) {
+    if(useKinect) {
       PImage depthImage = kinect.getDepthImage().copy();
       sourceGraphics.beginDraw();
       

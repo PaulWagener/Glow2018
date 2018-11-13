@@ -70,8 +70,8 @@ void setup() {
   // Setup fluid simulation
   fluid = new DwFluid2D(context, fluidWidth, fluidHeight, 1);
   fluid.param.dissipation_density     = 1.0f;
-  fluid.param.dissipation_velocity    = 0.9f;
-  fluid.param.vorticity               = 0.4f;
+  fluid.param.dissipation_velocity    = 0.97f;
+  fluid.param.vorticity               = 0.1f;
   //fluid.param.num_jacobi_projection   = 10;
   shaderVelocity = context.createShader("addVelocity.frag");
   shaderDensity = context.createShader("addDensity.frag");
@@ -89,7 +89,7 @@ void draw() {
   background(0);
   if(millis() > 3000) {
     if(kinect.numDevices() > 0) {
-      PImage depthImage = kinect.getDepthImage();
+      PImage depthImage = kinect.getDepthImage().copy();
       sourceGraphics.beginDraw();
       
       sourceGraphics.image(depthImage, 0, 0, sourceWidth, sourceHeight);
@@ -106,11 +106,11 @@ void draw() {
       sourceGraphics.beginDraw();
       sourceGraphics.background(0);
       if(!paused) {
-        float x = sourceWidth / 2 + sin(millis / 3800.0) * sourceWidth / 3;
-        float y = sourceWidth / 2 + cos(millis / 3600.0) * sourceWidth / 4;
+        float x = sourceWidth / 2 + sin(millis / 2800.0) * sourceWidth / 3;
+        float y = sourceWidth / 2 + cos(millis / 2600.0) * sourceWidth / 4;
         sourceGraphics.ellipse(x, y, 90, 90);
-        float x2 = sourceWidth / 2 + sin(millis / 1900.0) * sourceWidth / 3;
-        float y2 = sourceWidth / 2 + cos(millis / 500.0) * sourceWidth / 4;
+        float x2 = sourceWidth / 2 + sin(millis / 4900.0) * sourceWidth / 3;
+        float y2 = sourceWidth / 2 + cos(millis / 4500.0) * sourceWidth / 4;
         sourceGraphics.ellipse(x2, y2, 100, 100);
       }
       sourceGraphics.endDraw();
@@ -143,7 +143,7 @@ void draw() {
   int textureNew = getGL(sourceGraphics);
   context.beginDraw(fluid.tex_density.dst);
   shaderDensity.begin();
-  shaderDensity.uniform1f("time", (millis() / 500.0f) % 1.0f);
+  shaderDensity.uniform1f("time", (millis() / 1500.0f) % 1.0f);
   shaderDensity.uniform2f("wh", fluid.fluid_w, fluid.fluid_h); //<>//
   shaderDensity.uniformTexture("texture_old", fluid.tex_density.src);
   shaderDensity.uniformTexture("texture_new", textureNew);

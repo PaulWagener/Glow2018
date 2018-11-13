@@ -27,7 +27,7 @@ void main(){
     if(length(data_old) > length(data_ext)){
       data_new = data_old;
     } else {
-      data_new = mix(data_old, data_ext, 0.03);
+      data_new = mix(data_old, data_ext, 0.3);
     }
   }
 

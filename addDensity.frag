@@ -35,7 +35,7 @@ void main(){
 
   // Darken background
   if(length(data_old.xyz) > 0.3) {
-    data_old = mix(data_old, vec4(0, 0, 0, 1), 0.001);
+    data_old = mix(data_old, vec4(0, 0, 0, 1), 0.01);
   }
 
   float mix = 0.0;

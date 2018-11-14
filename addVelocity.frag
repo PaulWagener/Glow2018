@@ -30,7 +30,7 @@ void main(){
     // Add turbulence
     data_ext.xy += vec2(rand(gl_FragCoord.xy), rand(gl_FragCoord.yx)) * 15 * len;
 
-    data_ext *= 10.0;
+    data_ext *= 7.0;
     if(length(data_old) > length(data_ext)){
       data_new = data_old;
     } else {

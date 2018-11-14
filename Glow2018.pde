@@ -1,7 +1,7 @@
 boolean debug = false;
 boolean calibration = false;
-
 boolean paused = false;
+
 boolean fullscreen = true;
 boolean useKinect = true;
 
@@ -48,10 +48,13 @@ void settings() {
 }
 
  int[] tempArray = new int[1];
+ PImage borderImage;
  
 void setup() {
   kinect.initDepth();
   context = new DwPixelFlow(this);
+  
+  borderImage = loadImage("border.png"); 
   
   PImage glowImage = loadImage("glow.png"); 
   glowGraphics = (PGraphics2D)createGraphics(glowImage.width, glowImage.height, P2D);
@@ -71,7 +74,7 @@ void setup() {
   // Setup fluid simulation
   fluid = new DwFluid2D(context, fluidWidth, fluidHeight, 1);
   fluid.param.dissipation_density     = 1.0f;
-  fluid.param.dissipation_velocity    = 0.99f;
+  fluid.param.dissipation_velocity    = 0.98f;
   fluid.param.vorticity               = 0.0f;
   //fluid.param.num_jacobi_projection   = 10;
   shaderVelocity = context.createShader("addVelocity.frag");
@@ -196,6 +199,7 @@ void draw() {
     text("Kinect tilt: " + tilt, 20, 60);
   } else {
     image(fluidGraphics, 0, 0, width, height);
+    image(borderImage, 0, 0, width, height);
   
     if(debug) {
       drawDebug();

@@ -10,6 +10,10 @@ uniform vec2  wh;
 uniform sampler2D tex_opticalflow;
 uniform sampler2D tex_velocity_old;
 
+float rand(vec2 co){
+    return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453) * 2 - 1;
+}
+
 void main(){
 
   vec2 posn = gl_FragCoord.xy / wh;
@@ -22,6 +26,9 @@ void main(){
   float len = clamp(length(data_ext), 0.0, 1.0);
 
   if (len > 0.0) {
+
+    // Add turbulence
+    data_ext.xy += vec2(rand(gl_FragCoord.xy), rand(gl_FragCoord.yx)) * 15 * len;
 
     data_ext *= 5.0;
     if(length(data_old) > length(data_ext)){

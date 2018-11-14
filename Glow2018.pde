@@ -72,7 +72,7 @@ void setup() {
   fluid = new DwFluid2D(context, fluidWidth, fluidHeight, 1);
   fluid.param.dissipation_density     = 1.0f;
   fluid.param.dissipation_velocity    = 0.97f;
-  fluid.param.vorticity               = 0.1f;
+  fluid.param.vorticity               = 0.0f;
   //fluid.param.num_jacobi_projection   = 10;
   shaderVelocity = context.createShader("addVelocity.frag");
   shaderDensity = context.createShader("addDensity.frag");

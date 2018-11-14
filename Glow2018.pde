@@ -1,9 +1,9 @@
 boolean debug = false;
+boolean calibration = false;
 
 boolean paused = false;
 boolean fullscreen = true;
-boolean calibration = false;
-boolean useKinect = false;
+boolean useKinect = true;
 
 import org.openkinect.processing.*;
 import com.thomasdiewald.pixelflow.java.imageprocessing.DwOpticalFlow;
@@ -71,7 +71,7 @@ void setup() {
   // Setup fluid simulation
   fluid = new DwFluid2D(context, fluidWidth, fluidHeight, 1);
   fluid.param.dissipation_density     = 1.0f;
-  fluid.param.dissipation_velocity    = 0.97f;
+  fluid.param.dissipation_velocity    = 0.99f;
   fluid.param.vorticity               = 0.0f;
   //fluid.param.num_jacobi_projection   = 10;
   shaderVelocity = context.createShader("addVelocity.frag");

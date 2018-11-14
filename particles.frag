@@ -17,7 +17,7 @@ void main(){
   // Force back to original position
   vec2 vectorBack = reset_position - particle_data.xy;
 
-  particle_data.xy += vectorBack / 300;
+  particle_data.xy += vectorBack / 200;
 
   glFragColor = particle_data;
 }

@@ -76,7 +76,7 @@ void setup() {
   fluid.param.dissipation_density     = 1.0f;
   fluid.param.dissipation_velocity    = 0.98f;
   fluid.param.vorticity               = 0.0f;
-  //fluid.param.num_jacobi_projection   = 10;
+  fluid.param.num_jacobi_projection   = 8;
   shaderVelocity = context.createShader("addVelocity.frag");
   shaderDensity = context.createShader("addDensity.frag");
   fluidGraphics = (PGraphics2D)createGraphics(fluidWidth, fluidHeight, P2D);
